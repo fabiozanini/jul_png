@@ -27,21 +27,28 @@ if __name__ == '__main__':
     yg = np.linspace(0, 35, len(x))
     ys0 = np.concatenate([yr, yg])
 
-    def distance_pngs(ys):
-        # Create duplicate
+    def prepare_png():
         fig, ax = plt.subplots(
                 figsize=(shape[1] * 1.0 / dpi, shape[0] * 1.0 / dpi))
-
         ax.set_xlim(-5, 25)
         ax.set_ylim(0, 35)
+        ax.xaxis.set_ticks_position('both')
+        ax.yaxis.set_ticks_position('both')
+        ax.yaxis.set_tick_params(which='both', direction='in')
+        ax.xaxis.set_tick_params(which='both', direction='in')
+        plt.tight_layout(rect=(0.099, 0.072, 0.925, 0.947))
+        return {'fig': fig, 'ax': ax}
 
+    def distance_pngs(ys, fig, ax):
+        hr = None
+        hg = None
         yr = ys[:len(x)]
         xr = [xi for xi, yri in zip(x, yr) if yri is not None]
         if len(xr):
             if len(xr) == 1:
                 xr = [xr[0], xr[0] + 0.1]
                 yr = [yr[0], yr[0]]
-            ax.plot(xr, yr[:len(xr)], color='darkred', lw=2)
+            hr = ax.plot(xr, yr[:len(xr)], color='darkred', lw=2)
 
         yg = ys[len(x):]
         xg = [xi for xi, ygi in zip(x, yg) if ygi is not None]
@@ -49,20 +56,17 @@ if __name__ == '__main__':
             if len(xg) == 1:
                 xg = [xg[0], xg[0] + 0.1]
                 yg = [yg[0], yg[0]]
-            ax.plot(xg, yg[:len(xg)], color='green', lw=2)
-
-        ax.xaxis.set_ticks_position('both')
-        ax.yaxis.set_ticks_position('both')
-        ax.yaxis.set_tick_params(which='both', direction='in')
-        ax.xaxis.set_tick_params(which='both', direction='in')
-        plt.tight_layout(rect=(0.099, 0.072, 0.925, 0.947))
+            hg = ax.plot(xg, yg[:len(xg)], color='green', lw=2)
 
         # Save and reopen duplicate
         from io import BytesIO
         png_bytes = BytesIO()
         fig.savefig(png_bytes, dpi=dpi)
         im_dup = np.array(Image.open(png_bytes))
-        plt.close(fig)
+        if hr is not None:
+            hr[0].remove()
+        if hg is not None:
+            hg[0].remove()
 
         # Compare them
         im_comp = (255 - im) ^ (255 - im_dup[:, :, :3])
@@ -86,6 +90,7 @@ if __name__ == '__main__':
 
 
     # Minimize distance step by step
+    prep = prepare_png()
     n_points = 100
     ys = [None for y in ys0]
     y_scans = np.linspace(0, 35, n_points)
@@ -94,11 +99,24 @@ if __name__ == '__main__':
         print('Minimizing i+1='+str(i+1)+' of '+str(len(ys)))
         for iy, y_scan in enumerate(y_scans):
             ys[i] = y_scan
-            ds[i, iy] = distance_pngs(ys)
+            ds[i, iy] = distance_pngs(ys, fig=prep['fig'], ax=prep['ax'])
         ys[i] = y_scans[ds[i].argmin()]
-        if i > 3:
+        if i == 31:
             break
     plot_distance_line(ds)
+    yr = ys[:len(x)]
+    yg = ys[len(x):]
+    print('x:', x)
+    print('y red:', yr)
+    print('y green:', yg)
+
+    # Plot final figure
+    fin = prepare_png()
+    fin['ax'].plot(x, yr, lw=2, color='darkred')
+    #fin['ax'].plot(x, yg, lw=2, color='green')
+
+    plt.ion()
+    plt.show()
 
     sys.exit()
 
