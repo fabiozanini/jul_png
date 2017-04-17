@@ -7,6 +7,7 @@ content:    Try to reconstruct PNGs iteratively.
 # Modules
 import os
 import sys
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -16,8 +17,15 @@ from skimage.morphology import dilation
 # Script
 if __name__ == '__main__':
 
+    pa = argparse.ArgumentParser(description='Reconstruct graphs for Jul')
+    pa.add_argument(
+            'fn',
+            help='Filename of PNG image to read')
+
+    args = pa.parse_args()
+    fn = args.fn
+
     # Load matlab image
-    fn = '091126_Si541_01_1_R3D_1_D3D_1.png'
     im = np.array(Image.open(fn))
     shape = im.shape[:2]
     dpi = 100
@@ -122,6 +130,13 @@ if __name__ == '__main__':
     print('x:', x)
     print('y red:', yr)
     print('y green:', yg)
+
+    # Output results to file
+    fn_csv = fn[:-3]+'.csv'
+    with open(fn_csv, 'wt') as f:
+        f.write(','.join(['x', 'y red', 'y green'])+'\n')
+        for line in zip(x, yr, yg):
+            f.write(','.join(map(str, line))+'\n')
 
     # Plot final figure
     fin = prepare_png()
